@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-kc3hack_db}
+      - POSTGRES_USER=${POSTGRES_USER:-kc3hack_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-kc3hack_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-kc3hack_user} -d ${POSTGRES_DB:-kc3hack_db}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  minio:
+    image: minio/minio
+    restart: always
+    volumes:
+      - minio_data:/data
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000" # API用
+      - "${MINIO_CONSOLE_PORT:-9001}:9001" # 管理画面用
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minio_admin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minio_password}
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minio_admin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minio_password}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-kc3hack-bucket}
+      - MINIO_ENDPOINT=http://minio:9000
+    entrypoint: >
+      /bin/sh -c " echo 'Connecting to MinIO...';
+
+      mc alias set myminio \$$MINIO_ENDPOINT \$$MINIO_ROOT_USER \$$MINIO_ROOT_PASSWORD;
+
+      echo 'Creating bucket: \$$MINIO_BUCKET_NAME'; mc mb myminio/\$$MINIO_BUCKET_NAME || true;
+
+      echo 'Setting policy to public...'; mc anonymous set public myminio/\$$MINIO_BUCKET_NAME;
+
+      echo 'MinIO setup completed successfully!'; exit 0; "
+
+volumes:
+  postgres_data:
+  minio_data:
