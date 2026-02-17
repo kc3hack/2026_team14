@@ -10,7 +10,7 @@ services:
       db:
         condition: service_healthy
     env_file:
-      - .env
+      - stack.env
     environment:
       GDAL_LIBRARY_PATH: /usr/lib/x86_64-linux-gnu/libgdal.so
     command: >
@@ -25,10 +25,14 @@ services:
       - static_volume:/app/static
     depends_on:
       - web
+    env_file:
+      - stack.env
   tailscale:
     image: tailscale/tailscale:latest
     container_name: tailscale
     hostname: ${TS_HOSTNAME:-kc3hack-2026-team14}
+    env_file:
+      - stack.env
     environment:
       - TS_AUTHKEY=${TS_AUTHKEY}
       - TS_STATE_DIR=/var/lib/tailscale
@@ -56,6 +60,8 @@ services:
       - postgres_data:/var/lib/postgresql/data
     expose:
       - "5432"
+    env_file:
+      - stack.env
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 5s
@@ -69,6 +75,8 @@ services:
     expose:
       - "9000"
       - "9001"
+    env_file:
+      - stack.env
     command: server /data --console-address ":9001"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
@@ -80,6 +88,8 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+    env_file:
+      - stack.env
     entrypoint: >
       /bin/sh -c " until mc alias set myminio http://minio:9000 \${MINIO_ROOT_USER} \${MINIO_ROOT_PASSWORD}; do echo 'Waiting...'; sleep 1; done; mc mb myminio/\${MINIO_BUCKET_NAME} || true; mc anonymous set download myminio/\${MINIO_BUCKET_NAME}; exit 0; "
 
@@ -87,6 +97,8 @@ services:
     image: containrrr/watchtower
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    env_file:
+      - stack.env
     environment:
       DOCKER_API_VERSION: "1.44"
       REPO_USER: ${GH_USERNAME}

@@ -13,8 +13,23 @@
 1. GitHub の [Personal Access Tokens](https://github.com/settings/tokens) (Classic) で `read:packages` 権限を持つトークンを作成
 2. サーバー上で以下のコマンドを実行して GHCR にログイン
    ```bash
+   ```
    echo "YOUR_PAT" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
    ```
+
+## Portainer へのレジストリ追加
+
+1. Portainer にログインし、左メニューの Settings -> Registries を選択
+2. Add registry をクリック
+3. Custom registry を選択
+4. 以下の情報を入力：
+   - Name: `GitHub Container Registry` (任意の名前)
+   - Registry URL: `ghcr.io`
+   - Authentication: ON
+   - Username: GitHubのユーザー名
+   - Password: GitHubのPersonal Access Token (PAT)
+5. Add registry をクリック
+
 
 ## デプロイ手順
 
