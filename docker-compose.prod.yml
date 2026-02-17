@@ -89,6 +89,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       DOCKER_API_VERSION: "1.44"
+      REPO_USER: ${GH_USERNAME}
+      REPO_PASS: ${GH_PAT}
     command: --label-enable --interval 60 --cleanup
     restart: always
 volumes:

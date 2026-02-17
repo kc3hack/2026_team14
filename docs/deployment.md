@@ -4,8 +4,17 @@
 
 - サーバーに Docker と Portainer がインストールされていること
 - Tailscale の Auth Key (`tskey-auth-...`) を取得済みであること（[Tailscale Admin Console](https://login.tailscale.com/admin/settings/keys)）
-- GitHub Container Registry のパッケージ公開設定
-  - GitHub Actions が初回実行された後、GitHub のパッケージ設定（Packages -> Package Settings）で、`Visibility` を `Public` に変更してください。
+- GitHub Container Registry (GHCR) の認証情報（個人アクセストークン等）
+  - GitHub Organization の設定により、パッケージの Visibility が `Private` に制限されています。
+  - デプロイ環境でイメージをプルするために、適切な権限を持つ GitHub Personal Access Token (PAT) を用意し、`docker login ghcr.io` で認証を行ってください。
+
+## 認証情報の準備
+
+1. GitHub の [Personal Access Tokens](https://github.com/settings/tokens) (Classic) で `read:packages` 権限を持つトークンを作成
+2. サーバー上で以下のコマンドを実行して GHCR にログイン
+   ```bash
+   echo "YOUR_PAT" | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin
+   ```
 
 ## デプロイ手順
 
@@ -39,6 +48,10 @@
    # Tailscale
    TS_AUTHKEY=tskey-auth-xxxxx
    TS_HOSTNAME=kc3hack-team14
+   
+   # GitHub Container Registry (Watchtower auth)
+   GH_USERNAME=your-github-username
+   GH_PAT=ghp_your_personal_access_token
    ```
 
 6. Deploy the stack をクリック
