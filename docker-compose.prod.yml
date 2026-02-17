@@ -50,8 +50,8 @@ services:
       sh -c "mkdir -p /var/run/tailscale &&
              tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/var/run/tailscale/tailscaled.sock &
              sleep 5 &&
-             tailscale up --authkey=$${TS_AUTHKEY} --hostname=$${TS_HOSTNAME} --accept-routes &&
-             tailscale serve --bg https+insecure / http://nginx:80 &&
+             tailscale up --authkey=$${TS_AUTHKEY} --hostname=$${TS_HOSTNAME} --accept-routes --advertise-tags=tag:web-public &&
+             tailscale funnel --bg http://nginx:80 &&
              wait"
   db:
     image: postgis/postgis:16-3.4
@@ -103,7 +103,7 @@ services:
       DOCKER_API_VERSION: "1.44"
       REPO_USER: ${GH_USERNAME}
       REPO_PASS: ${GH_PAT}
-    command: --label-enable --interval 60 --cleanup
+    command: --label-enable --interval 20 --cleanup
     restart: always
 volumes:
   postgres_data:
