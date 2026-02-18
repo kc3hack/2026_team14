@@ -2,9 +2,11 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>World Borders</title>
+  <title>Pins</title>
+
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <style>
     html, body, #map { height: 100%; margin: 0; }
   </style>
@@ -13,25 +15,61 @@
 <div id="map"></div>
 
 <script>
-  const map = L.map("map").setView([20, 0], 2);
+  const map = L.map("map").setView([35.681236, 139.767125], 5);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  // 国境ポリゴン（GeoJSON）を表示
-  fetch("/worldborders.geojson")
+  function escapeHtml(s){
+    return (s ?? "").replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function addMarker(p) {
+    // Leaflet は [緯度, 経度] の順
+    const m = L.marker([p.ido, p.keido]).addTo(map);
+    const name = escapeHtml(p.name || "");
+    m.bindPopup(
+      `<b>${name}</b><br>` +
+      `<small>ido=${Number(p.ido).toFixed(6)}, keido=${Number(p.keido).toFixed(6)}</small>`
+    );
+    return m;
+  }
+
+  // 既存ピン読み込み（/maps/api/pins）
+  fetch("api/pins")
     .then(r => r.json())
-    .then(gj => L.geoJSON(gj).addTo(map));
+    .then(({ pins }) => pins.forEach(addMarker))
+    .catch(err => console.error(err));
 
-  // クリックした場所にピンを打つ（1個だけ置き換え）
-  let marker = null;
-  map.on("click", (e) => {
-    const { lat, lng } = e.latlng;
+  // クリックでピン追加→DB保存
+  map.on("click", async (e) => {
+    const ido = e.latlng.lat;   // 緯度
+    const keido = e.latlng.lng; // 経度
 
-    if (marker) marker.remove();              // 既存ピンを消す
-    marker = L.marker([lat, lng]).addTo(map); // 新しいピン
-    marker.bindPopup(`lat=${lat.toFixed(6)}, lng=${lng.toFixed(6)}`).openPopup();
+    const name = prompt("名前（空OK）") ?? "";
+
+    // 先に表示（保存失敗時は消す）
+    const temp = addMarker({ ido, keido, name });
+
+    try {
+      const res = await fetch("api/pins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ido, keido, name })
+      });
+
+      if (!res.ok) {
+        temp.remove();
+        alert("保存に失敗しました");
+      }
+    } catch (err) {
+      temp.remove();
+      alert("通信に失敗しました");
+      console.error(err);
+    }
   });
 </script>
 </body>

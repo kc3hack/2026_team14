@@ -1,6 +1,9 @@
+import json
+from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render
-from django.http import JsonResponse
-from world.models import WorldBorder
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.gis.geos import Point
+from .models import Pin
 
 def worldborders_geojson(request):
     features = []
@@ -13,3 +16,29 @@ def worldborders_geojson(request):
     return JsonResponse({"type": "FeatureCollection", "features": features})
 def map_page(request):
     return render(request, "world/map.html")
+def pin_get(request):
+    pins = Pin.objects.all()
+    data = [
+        {
+            "name": pin.name,
+            "ido": pin.location.y,
+            "keido": pin.location.x,
+        }
+        for pin in pins
+    ]
+    return JsonResponse({"pins": data})
+@csrf_exempt
+def pins(request):
+    if request.method == "GET":
+        return pin_get(request)
+    if request.method == "POST":
+        try:
+            body = json.loads(request.body.decode("utf-8"))
+            name = body.get("name", "")
+            ido = body["ido"]
+            keido = body["keido"]
+            location = Point(keido, ido, srid=4326)
+            pin = Pin.objects.create(name=name, location=location)
+            return JsonResponse({"status": "success", "id": pin.id})
+        except (KeyError, json.JSONDecodeError):
+            return HttpResponseBadRequest("Invalid data")

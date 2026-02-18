@@ -22,6 +22,12 @@ class WorldBorder(models.Model):
     # Returns the string representation of the model.
     def __str__(self):
         return self.name
+class Pin(models.Model):
+    #ピンに追加したいのがあったらこれに追加
+    name = models.CharField(max_length=100, blank=True)
+    location = models.PointField(srid=4326)
+    def __str__(self):
+        return self.name
 worldborders_mapping = {
     "fips": "FIPS",
     "iso2": "ISO2",
