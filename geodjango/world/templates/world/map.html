@@ -15,12 +15,21 @@
 <div id="map"></div>
 
 <script>
+  // ====== map init ======
   const map = L.map("map").setView([35.681236, 139.767125], 5);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
+  // ====== CSRF (Django) ======
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp("(^|;\\s*)" + name + "=([^;]*)"));
+    return m ? decodeURIComponent(m[2]) : null;
+  }
+  const csrftoken = getCookie("csrftoken");
+
+  // ====== Pins ======
   function escapeHtml(s){
     return (s ?? "").replace(/[&<>"']/g, c => ({
       "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
@@ -28,7 +37,7 @@
   }
 
   function addMarker(p) {
-    // Leaflet は [緯度, 経度] の順
+    // Leaflet は [緯度, 経度]
     const m = L.marker([p.ido, p.keido]).addTo(map);
     const name = escapeHtml(p.name || "");
     m.bindPopup(
@@ -38,17 +47,16 @@
     return m;
   }
 
-  // 既存ピン読み込み（/maps/api/pins）
+  // 既存ピン読み込み（/maps/api/pins ならここも合わせて）
   fetch("api/pins")
     .then(r => r.json())
     .then(({ pins }) => pins.forEach(addMarker))
     .catch(err => console.error(err));
 
-  // クリックでピン追加→DB保存
+  // クリックでピン追加→DB保存（CSRFヘッダ付ける）
   map.on("click", async (e) => {
     const ido = e.latlng.lat;   // 緯度
     const keido = e.latlng.lng; // 経度
-
     const name = prompt("名前（空OK）") ?? "";
 
     // 先に表示（保存失敗時は消す）
@@ -57,7 +65,10 @@
     try {
       const res = await fetch("api/pins", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrftoken ? { "X-CSRFToken": csrftoken } : {})
+        },
         body: JSON.stringify({ ido, keido, name })
       });
 
@@ -70,6 +81,53 @@
       alert("通信に失敗しました");
       console.error(err);
     }
+  });
+
+  // ====== GPS: current location overlay ======
+  let meMarker = null;     // 現在地マーカー（円）
+  let accCircle = null;    // 精度円
+  let firstFix = true;
+
+  function updateMe(lat, lng, accuracyMeters) {
+    const ll = [lat, lng];
+
+    if (!meMarker) {
+      // 現在地を目立たせる：circleMarker（プラグイン不要）
+      meMarker = L.circleMarker(ll, { radius: 8 }).addTo(map).bindPopup("現在地");
+    } else {
+      meMarker.setLatLng(ll);
+    }
+
+    if (!accCircle) {
+      accCircle = L.circle(ll, { radius: Math.max(accuracyMeters || 0, 5) }).addTo(map);
+    } else {
+      accCircle.setLatLng(ll);
+      accCircle.setRadius(Math.max(accuracyMeters || 0, 5));
+    }
+
+    // 初回だけ現在地へ寄せる（毎回 setView すると操作しにくい）
+    if (firstFix) {
+      map.setView(ll, 17);
+      firstFix = false;
+    }
+  }
+
+  function onGeoSuccess(pos) {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    const acc = pos.coords.accuracy; // meters
+    updateMe(lat, lng, acc);
+  }
+
+  function onGeoError(err) {
+    console.log("geolocation error:", err.code, err.message);
+  }
+
+  // 100ms timeout は厳しすぎるので少し伸ばすの推奨
+  navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, {
+    enableHighAccuracy: true,
+    maximumAge: 0,
+    timeout: 10000
   });
 </script>
 </body>
