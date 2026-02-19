@@ -75,9 +75,13 @@ WSGI_APPLICATION = 'geodjango.wsgi.application'
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': "django.contrib.gis.db.backends.spatialite",
-        'NAME': BASE_DIR / 'db.sqlite3',
+    "default": {
+        "ENGINE": "django.contrib.gis.db.backends.postgis",
+        "NAME": "mapdb",
+        "USER": "kc3hack_user",
+        "PASSWORD": "kc3hack_password",
+        "HOST": "localhost",  
+        "PORT": "5432",
     }
 }
 
