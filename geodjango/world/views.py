@@ -4,7 +4,8 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.gis.geos import Point
 from .models import Pin
-
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
 def worldborders_geojson(request):
     features = []
     for w in WorldBorder.objects.all():
@@ -16,10 +17,12 @@ def worldborders_geojson(request):
     return JsonResponse({"type": "FeatureCollection", "features": features})
 def map_page(request):
     return render(request, "world/map.html")
+
 def pin_get(request):
-    pins = Pin.objects.all()
+    pins = Pin.objects.filter(user=request.user)
     data = [
         {
+            
             "name": pin.name,
             "ido": pin.location.y,
             "keido": pin.location.x,
@@ -38,7 +41,11 @@ def pins(request):
             ido = body["ido"]
             keido = body["keido"]
             location = Point(keido, ido, srid=4326)
-            pin = Pin.objects.create(name=name, location=location)
+            pin = Pin.objects.create(
+                user=request.user,
+                name=name,
+                location=location,
+            )
             return JsonResponse({"status": "success", "id": pin.id})
         except (KeyError, json.JSONDecodeError):
             return HttpResponseBadRequest("Invalid data")
