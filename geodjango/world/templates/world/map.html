@@ -54,57 +54,55 @@
     .catch(err => console.error(err));
 
   // クリックでピン追加→DB保存（CSRFヘッダ付ける）
-  map.on("click", async (e) => {
-    const ido = e.latlng.lat;   // 緯度
-    const keido = e.latlng.lng; // 経度
-    const name = prompt("名前（空OK）") ?? "";
-
-    // 先に表示（保存失敗時は消す）
+  async function add_Pin(ido,keido,name){
     const temp = addMarker({ ido, keido, name });
 
     try {
-      const res = await fetch("api/pins", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(csrftoken ? { "X-CSRFToken": csrftoken } : {})
-        },
-        body: JSON.stringify({ ido, keido, name })
-      });
+        const res = await fetch("api/pins", {
+            method: "POST",
+            headers: {
+            "Content-Type": "application/json",
+            ...(csrftoken ? { "X-CSRFToken": csrftoken } : {})
+            },
+            body: JSON.stringify({ ido, keido, name })
+        });
 
-      if (!res.ok) {
-        temp.remove();
-        alert("保存に失敗しました");
-      }
+        if (!res.ok) {
+            temp.remove();
+            alert("保存に失敗しました");
+            return false;
+        }
+        return true;
     } catch (err) {
-      temp.remove();
-      alert("通信に失敗しました");
-      console.error(err);
+        temp.remove();
+        alert("通信に失敗しました");
+        console.error(err);
+        return false;
     }
-  });
+  };
 
   // ====== GPS: current location overlay ======
   let meMarker = null;     // 現在地マーカー（円）
   let accCircle = null;    // 精度円
   let firstFix = true;
-
-  function updateMe(lat, lng, accuracyMeters) {
-    const ll = [lat, lng];
-
+  let lastFix=null; //{ido,keido,acc}
+  function updateMe(ido, keido, accuracyMeters) {
+    const ll = [ido, keido];
+    lastFix={ido,keido,acc: accuracyMeters}
+    
     if (!meMarker) {
       // 現在地を目立たせる：circleMarker（プラグイン不要）
       meMarker = L.circleMarker(ll, { radius: 8 }).addTo(map).bindPopup("現在地");
     } else {
       meMarker.setLatLng(ll);
     }
-
+    const r = Math.max(accuracyMeters || 0, 5);
     if (!accCircle) {
-      accCircle = L.circle(ll, { radius: Math.max(accuracyMeters || 0, 5) }).addTo(map);
+      accCircle = L.circle(ll, { radius:r }).addTo(map);
     } else {
       accCircle.setLatLng(ll);
-      accCircle.setRadius(Math.max(accuracyMeters || 0, 5));
+      accCircle.setRadius(r);
     }
-
     // 初回だけ現在地へ寄せる（毎回 setView すると操作しにくい）
     if (firstFix) {
       map.setView(ll, 17);
@@ -113,10 +111,10 @@
   }
 
   function onGeoSuccess(pos) {
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
+    const ido = pos.coords.latitude;
+    const keido = pos.coords.longitude;
     const acc = pos.coords.accuracy; // meters
-    updateMe(lat, lng, acc);
+    updateMe(ido, keido, acc);
   }
 
   function onGeoError(err) {
@@ -129,6 +127,49 @@
     maximumAge: 0,
     timeout: 10000
   });
+  // ====== UI: 「現在地にピン」ボタン ======
+  const PinMeControl = L.Control.extend({
+    onAdd: function () {
+      const container = L.DomUtil.create("div");
+      container.style.background = "white";
+      container.style.padding = "8px";
+      container.style.border = "1px solid #999";
+      container.style.borderRadius = "8px";
+      container.style.boxShadow = "0 1px 4px rgba(0,0,0,0.2)";
+
+      const btn = L.DomUtil.create("button", "", container);
+      btn.textContent = "📍 現在地にピン";
+      btn.style.cursor = "pointer";
+      btn.style.border = "none";
+      btn.style.background = "transparent";
+      btn.style.fontSize = "14px";
+
+      // 地図のドラッグ等と競合しない
+      L.DomEvent.disableClickPropagation(container);
+      L.DomEvent.disableScrollPropagation(container);
+
+      btn.addEventListener("click", async (ev) => {
+        ev.preventDefault();
+
+        if (!lastFix) {
+          lastFix={ido:35.681236, keido:139.767125}
+          //alert("現在地が取得できません。");
+          //return;
+        }
+
+        const name = prompt("名前（空OK）") ?? "";
+        const ok = await add_Pin(lastFix.ido, lastFix.keido, name);
+
+        if (ok) {
+          map.setView([lastFix.ido, lastFix.keido], Math.max(map.getZoom(), 17));
+        }
+      });
+
+      return container;
+    }
+  });
+
+  map.addControl(new PinMeControl({ position: "topright" }));
 </script>
 </body>
 </html>
