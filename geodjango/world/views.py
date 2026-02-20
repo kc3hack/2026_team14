@@ -6,6 +6,9 @@ from django.contrib.gis.geos import Point
 from .models import Pin
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
+import uuid
+COOKIE_NAME = "anon_uuid"
+COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 def worldborders_geojson(request):
     features = []
     for w in WorldBorder.objects.all():
@@ -17,23 +20,39 @@ def worldborders_geojson(request):
     return JsonResponse({"type": "FeatureCollection", "features": features})
 def map_page(request):
     return render(request, "world/map.html")
-
+def get_or_set_anon_uuid(request, response=None):
+    raw=request.COOKIES.get(COOKIE_NAME)
+    if raw:
+        try:
+            return uuid.UUID(raw)
+        except ValueError:
+            pass
+    new_id = uuid.uuid4()
+    if response is not None:
+        response.set_cookie(COOKIE_NAME, str(new_id), max_age=COOKIE_MAX_AGE, httponly=True, samesite="Lax")
+    return new_id
 def pin_get(request):
-    pins = Pin.objects.filter(user=request.user)
+    resp=JsonResponse({"pins":[]})
+    default_id=get_or_set_anon_uuid(request, resp)
+    pins = Pin.objects.filter(default_id=default_id)
     data = [
         {
-            
+            "id": pin.id,
             "name": pin.name,
             "ido": pin.location.y,
             "keido": pin.location.x,
         }
         for pin in pins
     ]
-    return JsonResponse({"pins": data})
+    resp.content=JsonResponse({"pins": data}).content
+    return resp
 @csrf_exempt
+@require_http_methods(["GET", "POST"])
 def pins(request):
     if request.method == "GET":
         return pin_get(request)
+    resp = JsonResponse({"status": "error"})
+    owner = get_or_set_anon_uuid(request, resp)
     if request.method == "POST":
         try:
             body = json.loads(request.body.decode("utf-8"))
@@ -42,10 +61,11 @@ def pins(request):
             keido = body["keido"]
             location = Point(keido, ido, srid=4326)
             pin = Pin.objects.create(
-                user=request.user,
+                default_id=owner,
                 name=name,
                 location=location,
             )
-            return JsonResponse({"status": "success", "id": pin.id})
+            resp.content = JsonResponse({"status": "success", "id": pin.id}).content
+            return resp
         except (KeyError, json.JSONDecodeError):
             return HttpResponseBadRequest("Invalid data")

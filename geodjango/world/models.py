@@ -1,5 +1,6 @@
 from django.contrib.gis.db import models
 from django.conf import settings
+import uuid
 
 class WorldBorder(models.Model):
     # Regular Django fields corresponding to the attributes in the
@@ -31,6 +32,7 @@ class Pin(models.Model):
         null=True,#追加するときはこれを入れると既存データと衝突しない
         blank=True,
     )
+    default_id = models.UUIDField(default=uuid.uuid4,db_index=True,null=True,blank=True)
     name = models.CharField(max_length=100, blank=True)
     location = models.PointField(srid=4326)
     def __str__(self):
