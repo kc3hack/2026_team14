@@ -1,292 +1,467 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>Pins</title>
+    <meta charset="utf-8" />
+    <title>Pins</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <style>
-    html, body, #map { height: 100%; margin: 0; }
-  </style>
+    <style>
+        html, body, #map { height: 100%; margin: 0; }
+        .btn { cursor:pointer; border:1px solid #aaa; background:#fff; border-radius:8px; padding:6px 10px; }
+        .btn:active { transform: translateY(1px); }
+    </style>
 </head>
 <body>
-<div id="map"></div>
-<form style="display:none">{% csrf_token %}</form>
-<script>
-    // ====== map init ======
-    const map = L.map("map").setView([35.681236, 139.767125], 5);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    <div id="map"></div>
 
-    // ====== CSRF (Django) ======
-    function getCookie(name) {
-        const m = document.cookie.match(new RegExp("(^|;\\s*)" + name + "=([^;]*)"));
-        return m ? decodeURIComponent(m[2]) : null;
-    }
-    const csrftoken = getCookie("csrftoken");
+    <!-- csrftoken cookie を確実に発行させる -->
+    <form style="display:none">{% csrf_token %}</form>
 
-    // ====== Pins ======
-    function escapeHtml(s){
-        return (s ?? "").replace(/[&<>"']/g, c => ({
-        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-        }[c]));
-    }
-    const galleries = {};
-    function markerPopupHtml(p) {
-        const name = escapeHtml(p.name || "");
-        const pid = p.id;
+    <script>
+        // ====== map init ======
+        const map = L.map("map").setView([35.681236, 139.767125], 5);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "&copy; OpenStreetMap contributors"
+        }).addTo(map);
 
-        return `
-            <div style="width: 320px;">
-            <b>${name}</b><br>
-            <small>ido=${Number(p.ido).toFixed(6)}, keido=${Number(p.keido).toFixed(6)}</small>
+        // ====== CSRF (Django) ======
+        function getCookie(name) {
+            const m = document.cookie.match(new RegExp("(^|;\\s*)" + name + "=([^;]*)"));
+            return m ? decodeURIComponent(m[2]) : null;
+        }
+        const csrftoken = getCookie("csrftoken");
 
-            <div id="gallery-${pid}" style="margin-top:8px;">
-                <div style="text-align:center; color:#666;">(loading...)</div>
-            </div>
-
-            <div style="display:flex; gap:6px; margin-top:8px; align-items:center;">
-                <button type="button" onclick="prevImg(${pid})">◀</button>
-                <div id="counter-${pid}" style="flex:1; text-align:center; font-size:12px; color:#555;"></div>
-                <button type="button" onclick="nextImg(${pid})">▶</button>
-            </div>
-
-            <hr style="margin:8px 0;">
-
-            <input type="file" accept="image/*" id="file-${pid}">
-            <button type="button" onclick="uploadPhoto(${pid})">Upload</button>
-            </div>
-        `;
-    }
-    function addMarker(p) {
-        const m = L.marker([p.ido, p.keido]).addTo(map);
-        m.bindPopup(markerPopupHtml(p));
-
-        m.on("popupopen", () => {
-            loadImages(p.id);
-        });
-
-        return m;
-    }
-    async function loadImages(pinId) {
-        const res = await fetch(`api/pins/${pinId}/images/`);
-        const data = await res.json().catch(() => null);
-
-        const images = data?.images ?? [];
-        galleries[pinId] = { images, index: 0 };
-        renderGallery(pinId);
-    }
-
-    function renderGallery(pinId) {
-        const g = galleries[pinId] ?? { images: [], index: 0 };
-        const box = document.getElementById(`gallery-${pinId}`);
-        const counter = document.getElementById(`counter-${pinId}`);
-
-        if (!box) return; // popup閉じた等
-
-        const n = g.images.length;
-        if (n === 0) {
-            box.innerHTML = `<div style="text-align:center; color:#666;">(写真なし)</div>`;
-            if (counter) counter.textContent = "";
-            return;
+        // ====== utils ======
+        function escapeHtml(s) {
+            return (s ?? "").replace(/[&<>"']/g, c => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;"
+            }[c]));
         }
 
-        // index を安全化
-        g.index = ((g.index % n) + n) % n;
-
-        const url = g.images[g.index].url;
-        box.innerHTML = `
-            <img src="${url}" style="width:100%; height:auto; border-radius:10px; display:block;">
-        `;
-
-        if (counter) counter.textContent = `${g.index + 1} / ${n}`;
-    }
-    window.uploadPhoto = async function(pinId) {
-        const input = document.getElementById(`file-${pinId}`);
-        if (!input || input.files.length === 0) {
-            alert("ファイルを選択してください");
-            return;
+        function setMsg(pinId, text) {
+            const el = document.getElementById(`msg-${pinId}`);
+            if (el) el.textContent = text ?? "";
         }
 
-        const fd = new FormData();
-        fd.append("image", input.files[0]);  // ← フィールド名は image
+        // ====== Galleries (pinIdごと) ======
+        const galleries = {}; // { [pinId]: { images: [{id,url}], index:number } }
 
-        const res = await fetch(`api/pins/${pinId}/image/`, {
-            method: "POST",
-            body: fd,
-            headers: {
-                ...(csrftoken ? { "X-CSRFToken": csrftoken } : {})
+        async function loadImages(pinId) {
+            const res = await fetch(`api/pins/${pinId}/images/`);
+            const data = await res.json().catch(() => null);
+            const images = data?.images ?? [];
+
+            galleries[pinId] = { images, index: 0 };
+            renderGallery(pinId);
+        }
+
+        function renderGallery(pinId) {
+            const g = galleries[pinId] ?? { images: [], index: 0 };
+            const box = document.getElementById(`gallery-${pinId}`);
+            const counter = document.getElementById(`counter-${pinId}`);
+            if (!box) return;
+
+            const n = g.images.length;
+            if (n === 0) {
+                box.innerHTML = `<div style="text-align:center; color:#666;">(写真なし)</div>`;
+                if (counter) counter.textContent = "";
+                return;
             }
-        });
 
-        const data = await res.json().catch(() => null);
-        console.log("upload response:", data);
+            g.index = ((g.index % n) + n) % n;
+            const url = g.images[g.index].url;
 
-        if (!res.ok) {
-        alert("upload failed (HTTP " + res.status + ")");
-        return;
+            box.innerHTML = `<img src="${url}" style="width:100%; height:auto; border-radius:10px; display:block;">`;
+            if (counter) counter.textContent = `${g.index + 1} / ${n}`;
         }
 
-        // いろんな形に対応して url を取り出す
-        const url =
-        data?.photo?.url ??
-        data?.url ??
-        data?.image_url ??
-        null;   
+        window.prevImg = function(pinId) {
+            const g = galleries[pinId];
+            if (!g || g.images.length === 0) return;
+            g.index -= 1;
+            renderGallery(pinId);
+        };
 
-        if (!url) {
-        alert("upload succeeded but URL not found in response. See console.");
-        return;
-        }
+        window.nextImg = function(pinId) {
+            const g = galleries[pinId];
+            if (!g || g.images.length === 0) return;
+            g.index += 1;
+            renderGallery(pinId);
+        };
 
-        const img = document.createElement("img");
-        img.src = data.photo.url;
-        img.style.maxWidth = "100%";
-        img.style.marginTop = "6px";
+        // ====== MediaStream camera ======
+        const cameraState = {}; // { [pinId]: { stream: MediaStream|null, blob: Blob|null } }
 
-        document.getElementById(`photos-${pinId}`).appendChild(img);
-        input.value = "";
-    };
-    window.prevImg = function(pinId) {
-        const g = galleries[pinId];
-        if (!g || g.images.length === 0) return;
-        g.index -= 1;
-        renderGallery(pinId);
-    };
+        window.startCamera = async function(pinId) {
+            try {
+                if (cameraState[pinId]?.stream) return;
 
-    window.nextImg = function(pinId) {
-        const g = galleries[pinId];
-        if (!g || g.images.length === 0) return;
-        g.index += 1;
-        renderGallery(pinId);
-    };
-    // 既存ピン読み込み（/maps/api/pins ならここも合わせて）
-    fetch("api/pins")
-        .then(r => r.json())
-        .then(({ pins }) => pins.forEach(addMarker))
-        .catch(err => console.error(err));
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: "environment",
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                });
 
-    // クリックでピン追加→DB保存（CSRFヘッダ付ける）
-    async function add_Pin(ido,keido,name){
-        const temp = addMarker({ ido, keido, name });
+                cameraState[pinId] = { stream, blob: null };
 
-        try {
-            const res = await fetch("api/pins", {
+                const video = document.getElementById(`video-${pinId}`);
+                if (!video) return;
+
+                const camLabel = document.getElementById(`camlabel-${pinId}`);
+                if (camLabel) camLabel.style.display = "block";
+
+                video.srcObject = stream;
+                video.style.display = "block";
+
+                await video.play();
+                setMsg(pinId, "camera started");
+            } catch (e) {
+                console.error(e);
+                alert("カメラ起動に失敗: " + (e?.message ?? e));
+                setMsg(pinId, "camera failed");
+            }
+        };
+
+        window.stopCamera = function(pinId) {
+            const st = cameraState[pinId];
+            if (st?.stream) {
+                st.stream.getTracks().forEach(t => t.stop());
+                st.stream = null;
+            }
+
+            const video = document.getElementById(`video-${pinId}`);
+            if (video) {
+                video.pause();
+                video.srcObject = null;
+                video.style.display = "none";
+            }
+
+            const camLabel = document.getElementById(`camlabel-${pinId}`);
+            if (camLabel) camLabel.style.display = "none";
+
+            setMsg(pinId, "camera stopped");
+        };
+
+        window.capturePhoto = async function(pinId) {
+            const video = document.getElementById(`video-${pinId}`);
+            const canvas = document.getElementById(`canvas-${pinId}`);
+            const shot = document.getElementById(`shot-${pinId}`);
+            const shotLabel = document.getElementById(`shotlabel-${pinId}`);
+
+            if (!video || video.style.display === "none") {
+                alert("先にカメラ起動してください");
+                return;
+            }
+            if (!canvas) {
+                alert("canvas が見つかりません（markerPopupHtml に canvas を入れてください）");
+                return;
+            }
+
+            if (shotLabel) shotLabel.style.display = "block";
+
+            const w = video.videoWidth || 1280;
+            const h = video.videoHeight || 720;
+            canvas.width = w;
+            canvas.height = h;
+
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, w, h);
+
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.85));
+            if (!blob) {
+                alert("撮影に失敗しました");
+                return;
+            }
+
+            cameraState[pinId] = cameraState[pinId] ?? { stream: null, blob: null };
+            cameraState[pinId].blob = blob;
+
+            const url = URL.createObjectURL(blob);
+            if (shot) {
+                shot.innerHTML = `<img src="${url}" style="width:100%; height:auto; border-radius:10px; display:block;">`;
+            }
+            setMsg(pinId, "captured");
+        };
+
+        window.uploadCaptured = async function(pinId) {
+            const st = cameraState[pinId];
+            if (!st?.blob) {
+                alert("先に撮影してください");
+                return;
+            }
+
+            setMsg(pinId, "uploading captured...");
+
+            const fd = new FormData();
+            fd.append("image", st.blob, `capture_${Date.now()}.jpg`);
+
+            const res = await fetch(`api/pins/${pinId}/image/`, {
                 method: "POST",
-                headers: {
-                "Content-Type": "application/json",
-                ...(csrftoken ? { "X-CSRFToken": csrftoken } : {})
-                },
-                body: JSON.stringify({ ido, keido, name })
+                body: fd,
+                headers: { ...(csrftoken ? { "X-CSRFToken": csrftoken } : {}) }
             });
 
-            if (!res.ok) {
-                temp.remove();
-                alert("保存に失敗しました");
+            const data = await res.json().catch(() => null);
+            console.log("upload captured response:", data);
+
+            if (!res.ok || data?.ok === false) {
+                setMsg(pinId, "upload failed");
+                alert("upload failed: " + JSON.stringify(data));
+                return;
+            }
+
+            setMsg(pinId, "uploaded captured");
+
+            const shot = document.getElementById(`shot-${pinId}`);
+            if (shot) shot.innerHTML = "";
+
+            const shotLabel = document.getElementById(`shotlabel-${pinId}`);
+            if (shotLabel) shotLabel.style.display = "none";
+
+            if (cameraState[pinId]) cameraState[pinId].blob = null;
+
+            await loadImages(pinId);
+            const g = galleries[pinId];
+            if (g && g.images.length > 0) {
+                g.index = g.images.length - 1;
+                renderGallery(pinId);
+            }
+        };
+
+        // ====== Upload (file) ======
+        window.uploadPhoto = async function(pinId) {
+            const input = document.getElementById(`file-${pinId}`);
+            if (!input || input.files.length === 0) {
+                alert("ファイルを選択してください");
+                return;
+            }
+
+            setMsg(pinId, "uploading...");
+
+            const fd = new FormData();
+            fd.append("image", input.files[0]); // PinImage.image
+
+            const res = await fetch(`api/pins/${pinId}/image/`, {
+                method: "POST",
+                body: fd,
+                headers: { ...(csrftoken ? { "X-CSRFToken": csrftoken } : {}) }
+            });
+
+            const data = await res.json().catch(() => null);
+            console.log("upload response:", data);
+
+            if (!res.ok || data?.ok === false) {
+                setMsg(pinId, "upload failed");
+                alert("upload failed: " + JSON.stringify(data));
+                return;
+            }
+
+            input.value = "";
+            setMsg(pinId, "uploaded");
+
+            await loadImages(pinId);
+            const g = galleries[pinId];
+            if (g && g.images.length > 0) {
+                g.index = g.images.length - 1;
+                renderGallery(pinId);
+            }
+        };
+
+        // ====== popup html ======
+        function markerPopupHtml(p) {
+            const name = escapeHtml(p.name || "");
+            const pid = p.id;
+
+            return `
+                <div style="width: 320px;">
+                    <b>${name}</b><br>
+                    <small>ido=${Number(p.ido).toFixed(6)}, keido=${Number(p.keido).toFixed(6)}</small>
+
+                    <div id="gallery-${pid}" style="margin-top:8px;">
+                        <div style="text-align:center; color:#666;">(loading...)</div>
+                    </div>
+
+                    <div style="display:flex; gap:6px; margin-top:8px; align-items:center;">
+                        <button class="btn" type="button" onclick="prevImg(${pid})">◀</button>
+                        <div id="counter-${pid}" style="flex:1; text-align:center; font-size:12px; color:#555;"></div>
+                        <button class="btn" type="button" onclick="nextImg(${pid})">▶</button>
+                    </div>
+
+                    <hr style="margin:10px 0;">
+
+                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                        <button class="btn" type="button" onclick="startCamera(${pid})">📷 カメラ起動</button>
+                        <button class="btn" type="button" onclick="capturePhoto(${pid})">🟦 撮影</button>
+                        <button class="btn" type="button" onclick="stopCamera(${pid})">⛔ 停止</button>
+                        <button class="btn" type="button" onclick="uploadCaptured(${pid})">⬆ 撮影をアップロード</button>
+                    </div>
+
+                    <div id="camlabel-${pid}" style="margin-top:8px; font-size:12px; color:#555; display:none;">カメラ</div>
+                    <video id="video-${pid}" playsinline style="margin-top:6px; width:100%; border-radius:10px; display:none;"></video>
+                    <canvas id="canvas-${pid}" style="display:none;"></canvas>
+
+                    <div id="shotlabel-${pid}" style="margin-top:8px; font-size:12px; color:#555; display:none;">写真</div>
+                    <div id="shot-${pid}" style="margin-top:6px;"></div>
+
+                    <hr style="margin:10px 0;">
+
+                    <input type="file" accept="image/*" id="file-${pid}">
+                    <button class="btn" type="button" onclick="uploadPhoto(${pid})">Upload</button>
+
+                    <div id="msg-${pid}" style="margin-top:8px; font-size:12px; color:#555;"></div>
+                </div>
+            `;
+        }
+
+        function addMarker(p) {
+            const m = L.marker([p.ido, p.keido]).addTo(map);
+            m.bindPopup(markerPopupHtml(p));
+
+            m.on("popupopen", () => {
+                loadImages(p.id);
+            });
+
+            m.on("popupclose", () => {
+                stopCamera(p.id);
+            });
+
+            return m;
+        }
+
+        // ====== 既存ピン読み込み ======
+        fetch("api/pins")
+            .then(r => r.json())
+            .then(({ pins }) => pins.forEach(addMarker))
+            .catch(err => console.error(err));
+
+        // ====== ピン追加 → DB保存 ======
+        async function add_Pin(ido, keido, name) {
+            try {
+                const res = await fetch("api/pins", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        ...(csrftoken ? { "X-CSRFToken": csrftoken } : {})
+                    },
+                    body: JSON.stringify({ ido, keido, name })
+                });
+
+                if (!res.ok) {
+                    alert("保存に失敗しました");
+                    return false;
+                }
+
+                const data = await res.json().catch(() => null);
+                const id = data?.id;
+                if (!id) {
+                    alert("id が返ってきませんでした");
+                    return false;
+                }
+
+                addMarker({ id, ido, keido, name });
+                return true;
+            } catch (err) {
+                alert("通信に失敗しました");
+                console.error(err);
                 return false;
             }
-            return true;
-        } catch (err) {
-            temp.remove();
-            alert("通信に失敗しました");
-            console.error(err);
-            return false;
         }
-    };
 
-    // ====== GPS: current location overlay ======
-    let meMarker = null;     // 現在地マーカー（円）
-    let accCircle = null;    // 精度円
-    let firstFix = true;
-    let lastFix=null; //{ido,keido,acc}
-    function updateMe(ido, keido, accuracyMeters) {
-        const ll = [ido, keido];
-        lastFix={ido,keido,acc: accuracyMeters}
-        
-        if (!meMarker) {
-        // 現在地を目立たせる：circleMarker（プラグイン不要）
-        meMarker = L.circleMarker(ll, { radius: 8 }).addTo(map).bindPopup("現在地");
-        } else {
-        meMarker.setLatLng(ll);
-        }
-        const r = Math.max(accuracyMeters || 0, 5);
-        if (!accCircle) {
-        accCircle = L.circle(ll, { radius:r }).addTo(map);
-        } else {
-        accCircle.setLatLng(ll);
-        accCircle.setRadius(r);
-        }
-        // 初回だけ現在地へ寄せる（毎回 setView すると操作しにくい）
-        if (firstFix) {
-        map.setView(ll, 17);
-        firstFix = false;
-        }
-    }
+        // ====== GPS: current location overlay ======
+        let meMarker = null;
+        let accCircle = null;
+        let firstFix = true;
+        let lastFix = null; // {ido, keido, acc}
 
-    function onGeoSuccess(pos) {
-        const ido = pos.coords.latitude;
-        const keido = pos.coords.longitude;
-        const acc = pos.coords.accuracy; // meters
-        updateMe(ido, keido, acc);
-    }
+        function updateMe(ido, keido, accuracyMeters) {
+            const ll = [ido, keido];
+            lastFix = { ido, keido, acc: accuracyMeters };
 
-    function onGeoError(err) {
-        console.log("geolocation error:", err.code, err.message);
-    }
-
-    // 100ms timeout は厳しすぎるので少し伸ばすの推奨
-    navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, {
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 10000
-    });
-    // ====== UI: 「現在地にピン」ボタン ======
-    const PinMeControl = L.Control.extend({
-        onAdd: function () {
-        const container = L.DomUtil.create("div");
-        container.style.background = "white";
-        container.style.padding = "8px";
-        container.style.border = "1px solid #999";
-        container.style.borderRadius = "8px";
-        container.style.boxShadow = "0 1px 4px rgba(0,0,0,0.2)";
-
-        const btn = L.DomUtil.create("button", "", container);
-        btn.textContent = "📍 現在地にピン";
-        btn.style.cursor = "pointer";
-        btn.style.border = "none";
-        btn.style.background = "transparent";
-        btn.style.fontSize = "14px";
-
-        // 地図のドラッグ等と競合しない
-        L.DomEvent.disableClickPropagation(container);
-        L.DomEvent.disableScrollPropagation(container);
-
-        btn.addEventListener("click", async (ev) => {
-            ev.preventDefault();
-
-            if (!lastFix) {
-            lastFix={ido:35.681236, keido:139.767125}
-            //alert("現在地が取得できません。");
-            //return;
+            if (!meMarker) {
+                meMarker = L.circleMarker(ll, { radius: 8 }).addTo(map).bindPopup("現在地");
+            } else {
+                meMarker.setLatLng(ll);
             }
 
-            const name = prompt("名前（空OK）") ?? "";
-            const ok = await add_Pin(lastFix.ido, lastFix.keido, name);
+            const r = Math.max(accuracyMeters || 0, 5);
+            if (!accCircle) {
+                accCircle = L.circle(ll, { radius: r }).addTo(map);
+            } else {
+                accCircle.setLatLng(ll);
+                accCircle.setRadius(r);
+            }
 
-            if (ok) {
-            map.setView([lastFix.ido, lastFix.keido], Math.max(map.getZoom(), 17));
+            if (firstFix) {
+                map.setView(ll, 17);
+                firstFix = false;
+            }
+        }
+
+        function onGeoSuccess(pos) {
+            const ido = pos.coords.latitude;
+            const keido = pos.coords.longitude;
+            const acc = pos.coords.accuracy;
+            updateMe(ido, keido, acc);
+        }
+
+        function onGeoError(err) {
+            console.log("geolocation error:", err.code, err.message);
+        }
+
+        navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 10000
+        });
+
+        // ====== UI: 「現在地にピン」ボタン ======
+        const PinMeControl = L.Control.extend({
+            onAdd: function () {
+                const container = L.DomUtil.create("div");
+                container.style.background = "white";
+                container.style.padding = "8px";
+                container.style.border = "1px solid #999";
+                container.style.borderRadius = "8px";
+                container.style.boxShadow = "0 1px 4px rgba(0,0,0,0.2)";
+
+                const btn = L.DomUtil.create("button", "", container);
+                btn.textContent = "📍 現在地にピン";
+                btn.className = "btn";
+                btn.style.border = "none";
+                btn.style.background = "transparent";
+
+                L.DomEvent.disableClickPropagation(container);
+                L.DomEvent.disableScrollPropagation(container);
+
+                btn.addEventListener("click", async (ev) => {
+                    ev.preventDefault();
+
+                    if (!lastFix) {
+                        lastFix = { ido: 35.681236, keido: 139.767125 };
+                    }
+
+                    const name = prompt("名前（空OK）") ?? "";
+                    const ok = await add_Pin(lastFix.ido, lastFix.keido, name);
+                    if (ok) {
+                        map.setView([lastFix.ido, lastFix.keido], Math.max(map.getZoom(), 17));
+                    }
+                });
+
+                return container;
             }
         });
 
-        return container;
-        }
-    });
-
-    map.addControl(new PinMeControl({ position: "topright" }));
-</script>
+        map.addControl(new PinMeControl({ position: "topright" }));
+    </script>
 </body>
 </html>
