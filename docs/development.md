@@ -55,3 +55,6 @@ uv run python manage.py runserver
 
 #### MinIO Console
 - [http://127.0.0.1:9001](http://127.0.0.1:9001) (u: `minio_admin`, p: `minio_password`)
+
+###　インストールしたもの
+- Pillow

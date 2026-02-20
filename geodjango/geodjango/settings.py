@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
-
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -39,8 +39,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     "django.contrib.gis",
     "world",
+    "storages",
 ]
-
+MINIO_ENDPOINT_URL = os.environ.get("MINIO_ENDPOINT_URL", "http://localhost:9000")
+MINIO_ACCESS_KEY = os.environ.get("MINIO_ROOT_USER", "minio_admin")
+MINIO_SECRET_KEY = os.environ.get("MINIO_ROOT_PASSWORD", "minio_password")
+MINIO_BUCKET = os.environ.get("MINIO_BUCKET_NAME", "kc3hack-bucket")
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -50,7 +54,25 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "access_key": MINIO_ACCESS_KEY,
+            "secret_key": MINIO_SECRET_KEY,
+            "bucket_name": MINIO_BUCKET,
+            "endpoint_url": MINIO_ENDPOINT_URL,
+            "region_name": "us-east-1",
+            "use_ssl": False,
+            "verify": False,
+            "default_acl": None,
+        },
+    },
+    #ここよくわからんstaticfilesはローカルに保存するための設定。本番環境だとどうなるか不明。
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
 ROOT_URLCONF = 'geodjango.urls'
 
 TEMPLATES = [
