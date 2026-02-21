@@ -1,0 +1,36 @@
+function popupHtml(pin) {
+  // pin.photos が [{url: "...", caption: "..."}] みたいに返ってくる想定
+  const photo = pin.photos?.[0]; // とりあえず1枚目
+  const img = photo
+    ? `<img src="${photo.url}" style="width: 320px; max-width: 100%; height: auto; border-radius: 8px; display:block; margin-top:8px;">`
+    : `<p style="margin-top:8px;">(写真なし)</p>`;
+
+  const caption = photo?.caption ? `<p>${escapeHtml(photo.caption)}</p>` : "";
+
+  return `
+    <div style="width: 360px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0;">${escapeHtml(pin.name ?? "")}</h3>
+      </div>
+      ${caption}
+      ${img}
+    </div>
+  `;
+}
+
+// XSS対策（最低限）
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
+// 例：ピン作成
+fetch("/maps/api/pins")
+  .then(r => r.json())
+  .then(pins => {
+    pins.forEach(pin => {
+      const marker = L.marker([pin.lat, pin.lng]).addTo(map);
+      marker.bindPopup(popupHtml(pin));
+    });
+  });
