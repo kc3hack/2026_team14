@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.gis",
     "world",
     "storages",
+    'pwa',
 ]
 MINIO_ENDPOINT_URL = os.environ.get("MINIO_ENDPOINT_URL", "http://localhost:9000")
 MINIO_ACCESS_KEY = os.environ.get("MINIO_ROOT_USER", "minio_admin")
@@ -143,3 +144,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+STATICFILES_DIRS = [BASE_DIR / "static"]
+# PWA Configuration
+PWA_APP_NAME = "KC3Hack 2026 Team14"
+PWA_APP_DESCRIPTION = "KC3Hack 2026 Team14 Application"
+PWA_APP_THEME_COLOR = "#ffffff"
+PWA_APP_BACKGROUND_COLOR = "#ffffff"
+PWA_APP_DISPLAY = "fullscreen"
+PWA_APP_STATUS_BAR_COLOR = "default"
