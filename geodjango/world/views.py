@@ -6,8 +6,8 @@ from django.views.decorators.http import require_POST
 from django.contrib.gis.geos import Point
 from django.db import transaction
 from .models import Pin,PinImage
-from .forms import PinImageFormfrom 
-from .enrich import enrich_pinfrom 
+from .forms import PinImageForm
+from .enrich import enrich_pin
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 import uuid
