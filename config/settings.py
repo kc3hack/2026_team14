@@ -57,7 +57,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "config" / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -142,3 +142,11 @@ STORAGES = {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
+
+# PWA Configuration
+PWA_APP_NAME = "KC3Hack 2026 Team14"
+PWA_APP_DESCRIPTION = "KC3Hack 2026 Team14 Application"
+PWA_APP_THEME_COLOR = "#ffffff"
+PWA_APP_BACKGROUND_COLOR = "#ffffff"
+PWA_APP_DISPLAY = "fullscreen"
+PWA_APP_STATUS_BAR_COLOR = "default"

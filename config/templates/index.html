@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>KC3Hack 2026 Team14 App</title>
+    {% load pwa %}
+    {% progressive_web_app_meta %}
+    <style>
+        /* デフォルトの余白をリセットし、全体の背景色をセーフエリア（ノッチ等）まで広げる */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+            /* ここで指定した色がセーフエリアを含めた全画面の背景になります */
+            color: #333333;
+            font-family: sans-serif;
+            min-height: 100vh;
+        }
+
+        /* セーフエリア内にコンテンツを収めるためのコンテナ */
+        .safe-area-container {
+            /* iOS (ノッチやホームバー) や Androidのパンチホールに対応する定数(env)を指定 */
+            padding-top: env(safe-area-inset-top);
+            padding-right: env(safe-area-inset-right);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+
+            /* コンテンツがわかりやすいように少し内側に余白を取る */
+            box-sizing: border-box;
+            min-height: 100vh;
+            padding: calc(env(safe-area-inset-top) + 16px) calc(env(safe-area-inset-right) + 16px) calc(env(safe-area-inset-bottom) + 16px) calc(env(safe-area-inset-left) + 16px);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="safe-area-container">
+        <h1>Hello, world!</h1>
+        <p>PWA is now active with Safe Area Support!</p>
+    </div>
+</body>
+
+</html>
