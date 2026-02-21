@@ -24,12 +24,20 @@ class WorldBorder(models.Model):
         return self.name
 class Pin(models.Model):
     #ピンに追加したいのがあったらこれに追加
+    
     name = models.CharField(max_length=100, blank=True)
     location = models.PointField(srid=4326)
     address = models.JSONField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     def __str__(self):
         return self.name
+class PinImage(models.Model):
+    pin = models.ForeignKey(Pin, related_name="photos", on_delete=models.CASCADE)
+    image = models.ImageField(upload_to="pins/%Y/%m/%d/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"PinImage(pin_id={self.pin_id}, id={self.id})"
 worldborders_mapping = {
     "fips": "FIPS",
     "iso2": "ISO2",

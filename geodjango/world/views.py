@@ -1,10 +1,12 @@
 import json
 from django.http import JsonResponse, HttpResponseBadRequest
-from django.shortcuts import render
+from django.shortcuts import render,redirect,get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from django.contrib.gis.geos import Point
 from django.db import transaction
-from .models import Pin
+from .models import Pin,PinImage
+from .forms import PinImageFormfrom 
 from .enrich import enrich_pin
 def worldborders_geojson(request):
     features = []
@@ -47,3 +49,27 @@ def pins(request):
             return JsonResponse({"status": "success", "id": pin.id})
         except (KeyError, json.JSONDecodeError):
             return HttpResponseBadRequest("Invalid data")
+@require_POST
+@csrf_exempt
+def pin_image_upload(request, pin_id):
+    pin = get_object_or_404(Pin, id=pin_id)
+    form = PinImageForm(request.POST, request.FILES)
+    if not form.is_valid():
+        return HttpResponseBadRequest("Invalid form data")
+    pin_image = form.save(commit=False)
+    pin_image.pin = pin
+    pin_image.save()
+    return JsonResponse({
+        "ok": True,
+        "photo":{
+            "id": pin_image.id,
+            "url": pin_image.image.url,
+        }
+    })
+def api_pin_images(request, pin_id):
+    pin = get_object_or_404(Pin, id=pin_id)
+    images = [
+        {"id": img.id, "url": img.image.url}
+        for img in pin.photos.order_by("uploaded_at") 
+    ]
+    return JsonResponse({"ok": True, "images": images})
