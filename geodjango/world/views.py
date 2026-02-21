@@ -3,8 +3,9 @@ from django.http import JsonResponse, HttpResponseBadRequest
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.gis.geos import Point
+from django.db import transaction
 from .models import Pin
-
+from .enrich import enrich_pin
 def worldborders_geojson(request):
     features = []
     for w in WorldBorder.objects.all():
@@ -20,9 +21,12 @@ def pin_get(request):
     pins = Pin.objects.all()
     data = [
         {
+            "id": pin.id,
             "name": pin.name,
             "ido": pin.location.y,
             "keido": pin.location.x,
+            "address": pin.address,
+            "description": pin.description,
         }
         for pin in pins
     ]
@@ -39,6 +43,7 @@ def pins(request):
             keido = body["keido"]
             location = Point(keido, ido, srid=4326)
             pin = Pin.objects.create(name=name, location=location)
+            transaction.on_commit(lambda: enrich_pin(pin.id))
             return JsonResponse({"status": "success", "id": pin.id})
         except (KeyError, json.JSONDecodeError):
             return HttpResponseBadRequest("Invalid data")

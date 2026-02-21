@@ -26,6 +26,8 @@ class Pin(models.Model):
     #ピンに追加したいのがあったらこれに追加
     name = models.CharField(max_length=100, blank=True)
     location = models.PointField(srid=4326)
+    address = models.CharField(max_length=200, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
     def __str__(self):
         return self.name
 worldborders_mapping = {
