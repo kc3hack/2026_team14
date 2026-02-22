@@ -20,6 +20,10 @@
     <form style="display:none">{% csrf_token %}</form>
 
     <script>
+        // ====== API base ======
+        // config/urls.py で path("maps/", include("world.urls")) なので、API は /maps/... にある
+        const API_BASE = "/maps/";  // 末尾スラッシュ付き
+
         // ====== map init ======
         const map = L.map("map").setView([35.681236, 139.767125], 5);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -50,16 +54,29 @@
             if (el) el.textContent = text ?? "";
         }
 
+        async function fetchJson(url, options) {
+            const res = await fetch(url, options);
+            const text = await res.text();
+            let data = null;
+            try { data = text ? JSON.parse(text) : null; } catch (_) {}
+            if (!res.ok) {
+                console.error("HTTP Error", res.status, url, text.slice(0, 300));
+            }
+            return { res, data, text };
+        }
+
         // ====== Galleries (pinIdごと) ======
         const galleries = {}; // { [pinId]: { images: [{id,url}], index:number } }
 
         async function loadImages(pinId) {
-            const res = await fetch(`api/pins/${pinId}/images/`);
-            const data = await res.json().catch(() => null);
+            const { res, data } = await fetchJson(`${API_BASE}api/pins/${pinId}/images/`);
             const images = data?.images ?? [];
-
             galleries[pinId] = { images, index: 0 };
             renderGallery(pinId);
+
+            if (!res.ok) {
+                setMsg(pinId, `loadImages failed (${res.status})`);
+            }
         }
 
         function renderGallery(pinId) {
@@ -205,13 +222,12 @@
             const fd = new FormData();
             fd.append("image", st.blob, `capture_${Date.now()}.jpg`);
 
-            const res = await fetch(`api/pins/${pinId}/image/`, {
+            const { res, data } = await fetchJson(`${API_BASE}api/pins/${pinId}/image/`, {
                 method: "POST",
                 body: fd,
                 headers: { ...(csrftoken ? { "X-CSRFToken": csrftoken } : {}) }
             });
 
-            const data = await res.json().catch(() => null);
             console.log("upload captured response:", data);
 
             if (!res.ok || data?.ok === false) {
@@ -251,13 +267,12 @@
             const fd = new FormData();
             fd.append("image", input.files[0]); // PinImage.image
 
-            const res = await fetch(`api/pins/${pinId}/image/`, {
+            const { res, data } = await fetchJson(`${API_BASE}api/pins/${pinId}/image/`, {
                 method: "POST",
                 body: fd,
                 headers: { ...(csrftoken ? { "X-CSRFToken": csrftoken } : {}) }
             });
 
-            const data = await res.json().catch(() => null);
             console.log("upload response:", data);
 
             if (!res.ok || data?.ok === false) {
@@ -339,15 +354,18 @@
         }
 
         // ====== 既存ピン読み込み ======
-        fetch("api/pins")
-            .then(r => r.json())
-            .then(({ pins }) => pins.forEach(addMarker))
+        fetchJson(`${API_BASE}api/pins`)
+            .then(({ res, data }) => {
+                if (!res.ok) throw new Error(`pins api failed: ${res.status}`);
+                const pins = data?.pins ?? [];
+                pins.forEach(addMarker);
+            })
             .catch(err => console.error(err));
 
         // ====== ピン追加 → DB保存 ======
         async function add_Pin(ido, keido, name) {
             try {
-                const res = await fetch("api/pins", {
+                const { res, data } = await fetchJson(`${API_BASE}api/pins`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -361,7 +379,6 @@
                     return false;
                 }
 
-                const data = await res.json().catch(() => null);
                 const id = data?.id;
                 if (!id) {
                     alert("id が返ってきませんでした");
