@@ -11,11 +11,15 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import sys
 import environ
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Add geodjango directory to sys.path so 'world' app can be imported
+sys.path.insert(0, os.path.join(BASE_DIR, "geodjango"))
 
 env = environ.Env()
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
@@ -40,6 +44,7 @@ INSTALLED_APPS = [
     "pwa",
     "storages",
     "config",
+    "world",
 ]
 
 MIDDLEWARE = [

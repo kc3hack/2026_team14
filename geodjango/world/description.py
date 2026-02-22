@@ -3,7 +3,9 @@ from typing import Optional
 from openai import OpenAI
 from .models import Pin
 from .wiki import search_first_pageid, get_extract
-_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+_client = None
+if os.getenv("OPENAI_API_KEY"):
+    _client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 DEFAULT_MODEL="gpt-5-mini"
 def load_address(name: str, address: Optional[dict]) -> str:
     text=""
