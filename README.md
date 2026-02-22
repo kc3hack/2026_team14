@@ -1,12 +1,12 @@
 # プロダクト名 
 <!-- プロダクト名に変更してください -->
-TABI.LOG
-![プロダクト名](https://kc3.me/cms/wp-content/uploads/2026/02/444e7120d5cdd74aa75f7a94bf8821a5-scaled.png)
+
+![TABI.LOG](https://media.discordapp.net/attachments/1472165692617920625/1474808952309944490/image.png?ex=699b325e&is=6999e0de&hm=fcec82dcd7a3ddbf045023fc7e34d628b3638b054635229923eea9f8a11dcd42&=&format=webp&quality=lossless&width=1860&height=876)
 <!-- プロダクト名・イメージ画像を差し変えてください -->
 
 
 ## チーム名
-チーム14 
+チーム14 404nf
 <!-- チームIDとチーム名を入力してください -->
 
 
