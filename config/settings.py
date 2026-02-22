@@ -20,9 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Add geodjango directory to sys.path so 'world' app can be imported
 sys.path.insert(0, os.path.join(BASE_DIR, "geodjango"))
-STATICFILES_DIRS = [
-    BASE_DIR / "geodjango" / "static",
-]
+
 env = environ.Env()
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
@@ -130,9 +128,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = "static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
-
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR /"geodjango"/ "statics" / "staticfiles"
+STATICFILES_DIRS = [
+    BASE_DIR / "geodjango" / "static",
+]
 # MinIO
 AWS_ACCESS_KEY_ID = env("MINIO_ROOT_USER")
 AWS_SECRET_ACCESS_KEY = env("MINIO_ROOT_PASSWORD")
