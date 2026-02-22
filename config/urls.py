@@ -24,4 +24,5 @@ urlpatterns = [
     path('', map_page, name='index'),  # Serve map on the root page
     path('health/', views.health, name='health'),
     path('maps/', include('world.urls')),
+    path("", include("pwa.urls")),
 ]

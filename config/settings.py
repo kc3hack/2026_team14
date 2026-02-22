@@ -20,7 +20,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Add geodjango directory to sys.path so 'world' app can be imported
 sys.path.insert(0, os.path.join(BASE_DIR, "geodjango"))
-
+STATICFILES_DIRS = [
+    BASE_DIR / "geodjango" / "static",
+]
 env = environ.Env()
 environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 
