@@ -1,0 +1,509 @@
+/* static/css/style.css */
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden;
+    /* Prevent scrolling as map takes full screen */
+}
+
+/* Map Container */
+#map {
+    width: 100vw;
+    height: 100vh;
+    /* Fallback */
+    height: 100dvh;
+    /* Dynamic viewport height for mobile browsers */
+    z-index: 1;
+    /* Base layer */
+}
+
+/* Custom Photo Pin Marker */
+.custom-photo-pin {
+    width: 70px;
+    height: 86px;
+    position: relative;
+    /* Apply a single unified shadow to the whole pin shape */
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+    /* Prevent text/image selection during long press context menu */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.custom-photo-pin-inner {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translate(-50%, 0) translateZ(0);
+    /* Hardware acceleration */
+    width: 60px;
+    height: 60px;
+    background: #fff;
+    border-radius: 30px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 3px;
+    box-sizing: border-box;
+    /* Use very smooth deceleration curve */
+    transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1),
+        height 0.4s cubic-bezier(0.175, 0.885, 0.32, 1),
+        border-radius 0.4s cubic-bezier(0.175, 0.885, 0.32, 1),
+        padding 0.4s cubic-bezier(0.175, 0.885, 0.32, 1);
+    overflow: hidden;
+    /* Ensure hardware acceleration and layout isolation */
+    will-change: width, height, border-radius;
+    contain: layout paint;
+    backface-visibility: hidden;
+}
+
+/* Container for image to enforce aspect ratio hiding warp */
+.custom-photo-pin-img-wrapper {
+    width: 54px;
+    height: 54px;
+    border-radius: 27px;
+    /* Matches initial state exactly so fillet animates seamlessly */
+    overflow: hidden;
+    flex-shrink: 0;
+    transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1),
+        height 0.4s cubic-bezier(0.175, 0.885, 0.32, 1),
+        border-radius 0.4s cubic-bezier(0.175, 0.885, 0.32, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    will-change: width, height, border-radius;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+.custom-photo-pin-inner img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transform: translateZ(0);
+    /* Prevent native image drag/save dialogs on long press */
+    -webkit-user-drag: none;
+    pointer-events: none;
+}
+
+/* Text Container inside the pin */
+.custom-photo-pin-text {
+    opacity: 0;
+    width: 120px;
+    /* Fixed width prevents layout thrashing */
+    flex-shrink: 0;
+    /* Prevent squishing */
+    white-space: nowrap;
+    margin-left: 16px;
+    /* Fixed margin, doesn't animate */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transform: translate(-10px, 0) translateZ(0);
+    /* Slight slide from left */
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    will-change: opacity, transform;
+    pointer-events: none;
+}
+
+.custom-photo-pin-text strong {
+    font-size: 16px;
+    color: #333;
+    line-height: 1.2;
+}
+
+.custom-photo-pin-text span {
+    font-size: 12px;
+    color: #777;
+    margin-top: 6px;
+}
+
+/* Expanded State */
+
+.custom-photo-pin.expanded .custom-photo-pin-inner {
+    width: 300px;
+    /* Wider expanded width */
+    height: 140px;
+    /* Taller expanded height */
+    border-radius: 16px;
+    /* Smooth rounded rectangle */
+    padding: 12px;
+}
+
+.custom-photo-pin.expanded .custom-photo-pin-img-wrapper {
+    width: 156px;
+    height: 116px;
+    /* Explicit pixel value for smooth transition (140 - 24 padding) */
+    border-radius: 8px;
+    /* Inner rounding */
+}
+
+.custom-photo-pin.expanded .custom-photo-pin-text {
+    opacity: 1;
+    transform: translateX(0);
+    /* Delay the text appearance slightly so it slides in after the container reveals it */
+    transition: opacity 0.4s ease 0.15s, transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s;
+}
+
+.custom-photo-pin::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-top: 20px solid #fff;
+    filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.3));
+    z-index: 1;
+}
+
+/* Normal POI Pin Marker */
+.poi-pin {
+    width: 36px;
+    height: 50px;
+    position: relative;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.15));
+}
+
+.poi-pin-inner {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 36px;
+    background: #fff;
+    border: 3px solid #c5a059;
+    /* Elegant Gold */
+    border-radius: 50%;
+    box-sizing: border-box;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.poi-pin-inner i {
+    color: #c5a059;
+    font-size: 16px;
+}
+
+.poi-pin::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 14px solid #c5a059;
+    /* Seamlessly merges with gold border */
+    z-index: 1;
+}
+
+/* POI Text Container */
+.poi-pin-text {
+    opacity: 0;
+    width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    margin-left: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transform: translate(-10px, 0) translateZ(0);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    will-change: opacity, transform;
+    pointer-events: none;
+}
+
+.poi-pin-text strong {
+    font-size: 16px;
+    color: #333;
+    line-height: 1.2;
+}
+
+.poi-pin-text span {
+    font-size: 12px;
+    color: #777;
+    margin-top: 6px;
+}
+
+/* Expanded POI State */
+
+.poi-pin.expanded .poi-pin-inner {
+    width: 200px;
+    height: 60px;
+    border-radius: 30px;
+    padding: 0 16px;
+    justify-content: flex-start;
+    transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1),
+        border-radius 0.4s cubic-bezier(0.175, 0.885, 0.32, 1);
+}
+
+.poi-pin.expanded .poi-pin-text {
+    opacity: 1;
+    width: 130px;
+    margin-left: 12px;
+    transform: translateX(0);
+    transition: opacity 0.4s ease 0.15s, transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s;
+}
+
+/* Floating Action Buttons (FABs) container */
+.fab-container {
+    position: fixed;
+    bottom: calc(env(safe-area-inset-bottom) + 32px);
+    left: 50%;
+    transform: translateX(-50%);
+    touch-action: none;
+    /* Prevent pinch zoom */
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    /* Reduced gap to fit 4 buttons */
+    z-index: 1000;
+    /* Above Leaflet map */
+}
+
+/* Individual FAB styling */
+.fab {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #fff;
+    color: #c5a059;
+    /* Elegant Gold */
+    border: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    /* Softer, elegant shadow */
+    font-size: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1),
+        background-color 0.2s,
+        box-shadow 0.2s,
+        color 0.2s;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.fab:active {
+    transform: scale(0.92);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Bottom Sheet Container (Collections Semi-Modal) */
+.bottom-sheet {
+    position: fixed;
+    bottom: 0;
+    /* Base position */
+    left: 0;
+    width: 100%;
+    height: 60vh;
+    background-color: #fff;
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08);
+    /* Softer modal shadow */
+    z-index: 2000;
+    /* Move off-screen by translating its full height */
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.bottom-sheet.open {
+    transform: translateY(0);
+}
+
+/* Disable transitions while actively dragging */
+.bottom-sheet.dragging {
+    transition: none;
+}
+
+/* Drag Handle */
+.sheet-drag-handle {
+    width: 100%;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    touch-action: none;
+    /* Prevent drag/pinch zoom */
+}
+
+.sheet-drag-indicator {
+    width: 40px;
+    height: 4px;
+    background-color: #e0d8c8;
+    /* Warm light grey/gold */
+    border-radius: 2px;
+}
+
+/* Sheet Content */
+.sheet-content {
+    flex: 1;
+    padding: 0 24px;
+    overflow-y: auto;
+    touch-action: pan-y;
+    /* Only allow vertical scroll */
+    overscroll-behavior: contain;
+}
+
+.sheet-content h2 {
+    margin-top: 0;
+    font-size: 20px;
+    margin-bottom: 20px;
+    color: #333;
+    font-weight: 600;
+}
+
+/* Mockup List items */
+.collection-item {
+    padding: 16px;
+    border-bottom: 1px solid #f0eee8;
+    /* Warm border */
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.collection-item i {
+    color: #c5a059;
+    font-size: 20px;
+    width: 24px;
+    text-align: center;
+}
+
+/* Context Menu HTML Map mockup */
+.context-menu {
+    position: absolute;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    z-index: 3000;
+    display: none;
+    overflow: hidden;
+    min-width: 140px;
+    /* Prevent text selection when tapping menu items */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
+.context-menu-item {
+    padding: 14px 16px;
+    font-size: 15px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+}
+
+.context-menu-item:last-child {
+    border-bottom: none;
+}
+
+.context-menu-item:active {
+    background-color: #f0f0f0;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 4000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: #fff;
+    width: 90%;
+    max-width: 320px;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    color: #333;
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 24px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 14px;
+    color: #777;
+    margin-bottom: 8px;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+    box-sizing: border-box;
+    font-family: inherit;
+    outline: none;
+}
+
+.form-control:focus {
+    border-color: #c5a059;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-secondary {
+    background: #eee;
+    color: #555;
+}
+
+.btn-primary {
+    background: #c5a059;
+    color: #fff;
+}
