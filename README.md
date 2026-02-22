@@ -1,7 +1,8 @@
-# プロダクト名 
+# プロダクト名
+TABI.Log
 <!-- プロダクト名に変更してください -->
 
-![TABI.LOG](https://media.discordapp.net/attachments/1472165692617920625/1474808952309944490/image.png?ex=699b325e&is=6999e0de&hm=fcec82dcd7a3ddbf045023fc7e34d628b3638b054635229923eea9f8a11dcd42&=&format=webp&quality=lossless&width=1860&height=876)
+(https://media.discordapp.net/attachments/1472165692617920625/1474808952309944490/image.png?ex=699b325e&is=6999e0de&hm=fcec82dcd7a3ddbf045023fc7e34d628b3638b054635229923eea9f8a11dcd42&=&format=webp&quality=lossless&width=1860&height=876)
 <!-- プロダクト名・イメージ画像を差し変えてください -->
 
 
@@ -25,16 +26,6 @@ GPSや写真から自分がどのような場所にいるのかを判定し，�
 ## 操作説明・デモ動画
 [デモ動画はこちら](https://www.youtube.com/watch?v=fbzGp0XJGq8)
 <!-- 開発したプロダクトの操作説明について入力してください。また、操作説明デモ動画があれば、埋め込みやリンクを記載してください -->
-
-
-## 注力したポイント
-<!-- 開発したプロダクトの中で、特に注力して作成した箇所・ポイントについて入力してください -->
-### アイデア面
-
-### デザイン面
-
-### その他
-普段使わないような技術を使用しスキルアップを図った．
 
 ## 使用技術
 Django
