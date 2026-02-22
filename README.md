@@ -2,7 +2,7 @@
 TABI.Log
 <!-- プロダクト名に変更してください -->
 
-(https://media.discordapp.net/attachments/1472165692617920625/1474808952309944490/image.png?ex=699b325e&is=6999e0de&hm=fcec82dcd7a3ddbf045023fc7e34d628b3638b054635229923eea9f8a11dcd42&=&format=webp&quality=lossless&width=1860&height=876)
+[!TABI.Log](https://media.discordapp.net/attachments/1472165692617920625/1474808952309944490/image.png?ex=699b325e&is=6999e0de&hm=fcec82dcd7a3ddbf045023fc7e34d628b3638b054635229923eea9f8a11dcd42&=&format=webp&quality=lossless&width=1860&height=876)
 <!-- プロダクト名・イメージ画像を差し変えてください -->
 
 
